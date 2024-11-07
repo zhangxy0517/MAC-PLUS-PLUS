@@ -135,6 +135,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     // 获取当前项目名称
     string item_name = folderPath.substr(folderPath.rfind("/") + 1, folderPath.length());
 
+    vector<pair<int, vector<int>>> one2k_match;
 
     FILE* corr, * gt;
     corr = fopen(corr_path.c_str(), "r");
@@ -472,6 +473,29 @@ bool registration(const string &name, const string &src_pointcloud, const string
     }
     inlier_ratio = inlier_num / (total_num / 1.0);
 
+//    string _1tok = dataPath + '/' + item_name + "@1tok.txt";
+//    fp = fopen(_1tok.c_str(), "r");
+//    if (fp == NULL)
+//    {
+//        printf("1tok File can't open!\n");
+//        return -1;
+//    }
+//    int i = 0;
+//    while (!feof(fp)) {
+//        vector<int>relax_ind;
+//        int value;
+//        for(int j = 0; j < 99; j++){
+//            fscanf(fp, "%d ", &value);
+//            relax_ind.push_back(value);
+//        }
+//        fscanf(fp, "%d\n", &value);
+//        relax_ind.push_back(value);
+//        one2k_match.emplace_back(i, relax_ind);
+//        relax_ind.clear();
+//        i++;
+//    }
+//    fclose(fp);
+
 /**********************************不同数据集的阈值参数设置************************************/
     float RE_thresh, TE_thresh, inlier_thresh;
     if (name == "KITTI")
@@ -501,7 +525,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     elapsed_time = end - start;
     time_epoch += std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count();
     time_number[0] = elapsed_time.count();
-    //cout << " graph construction: " << elapsed_time.count() << endl;
+    cout << " graph construction: " << elapsed_time.count() << endl;
     if (Graph.norm() == 0) {
         cout << "Graph is disconnected. You may need to check the compatibility threshold!" << endl;
         return false;
@@ -787,7 +811,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     elapsed_time = end - start;
     time_epoch += std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count();
     time_number[2] = elapsed_time.count();
-    //cout << " clique selection: " << elapsed_time.count() << endl;
+    cout << " clique selection: " << elapsed_time.count() << endl;
 
     PointCloudPtr src_corr_pts(new pcl::PointCloud<pcl::PointXYZ>);
     PointCloudPtr des_corr_pts(new pcl::PointCloud<pcl::PointXYZ>);
@@ -820,7 +844,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
 #pragma omp parallel for
     for (int i = 0; i < (int)total_estimate; i++)
     {
-        vector<Corre_3DMatch>Group;
+        vector<Corre_3DMatch>Group, Group1;
         vector<int>selected_index;
         igraph_vector_int_t* v = igraph_vector_int_list_get_ptr(&cliques, remain[i]);
         int group_size = igraph_vector_int_size(v);
@@ -840,6 +864,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
         {
             if (k.score >= weight_thresh)
             {
+                Group1.push_back(k);
                 src_pts->push_back(k.src);
                 des_pts->push_back(k.des);
                 weights.push_back(k.score);
@@ -857,7 +882,8 @@ bool registration(const string &name, const string &src_pointcloud, const string
             weight_vec.setOnes(); // 2023.2.23
         }
         weight_SVD(src_pts, des_pts, weight_vec, 0, est_trans); //生成位姿变换假设
-
+        Group.assign(Group1.begin(), Group1.end());
+        Group1.clear();
 /******************************************初步评估所有的假设***************************************************/
         float score = 0.0, score_local = 0.0;
         score = OAMAE(cloud_src_kpts, cloud_des_kpts, est_trans, des_src, inlier_thresh);
@@ -919,32 +945,26 @@ bool registration(const string &name, const string &src_pointcloud, const string
     est_vector1.clear();
 
     //先evaluate再筛选
-    int max_num = min((int)total_num, (int)total_estimate);
-    max_num = min(max_num, max_est_num);
-    int success_num_tmp =success_num;
+    int max_num = min(min((int)total_num, (int)total_estimate), max_est_num);
     success_num = 0;
-    vector<int>reduce_ind;
-    if((int )est_vector.size() > max_num){
+    vector<int>remained_est_ind;
+    vector<Eigen::Matrix3f> Rs_new;
+    vector<Eigen::Vector3f> Ts_new;
+    if((int )est_vector.size() > max_num) { //选出排名靠前的假设
         cout << "too many cliques" << endl;
-        clique_reduce =true;
-        vector<Eigen::Matrix3f> Rs_new;
-        vector<Eigen::Vector3f> Ts_new;
-        for(int i = 0; i < max_num; i++){
-            reduce_ind.push_back(indices[i]);
-            Rs_new.push_back(Rs[indices[i]]);
-            Ts_new.push_back(Ts[indices[i]]);
-            success_num += est_vector[i].flag ? 1 : 0;
-        }
-        Rs.clear();
-        Ts.clear();
-        Rs.assign(Rs_new.begin(), Rs_new.end());
-        Ts.assign(Ts_new.begin(), Ts_new.end());
-        Rs_new.clear();
-        Ts_new.clear();
     }
-    else{
-        success_num = success_num_tmp;
+    for(int i = 0; i < min(max_num, (int )est_vector.size()); i++){
+        remained_est_ind.push_back(indices[i]);
+        Rs_new.push_back(Rs[indices[i]]);
+        Ts_new.push_back(Ts[indices[i]]);
+        success_num += est_vector[i].flag ? 1 : 0;
     }
+    Rs.clear();
+    Ts.clear();
+    Rs.assign(Rs_new.begin(), Rs_new.end());
+    Ts.assign(Ts_new.begin(), Ts_new.end());
+    Rs_new.clear();
+    Ts_new.clear();
 
     if(success_num > 0){
         if(!no_logs){
@@ -1117,28 +1137,17 @@ bool registration(const string &name, const string &src_pointcloud, const string
         vector<int>subUnionInd;
         int index = sortCluster[i].index; //clusterTrans中的序号
         int k = clusterTrans[index].indices[0]; //初始聚类中心
-        float cluster_center_score = clique_reduce ? scores[reduce_ind[k]] :scores[k]; //初始聚类中心分数
-
-        if(clique_reduce){
-            subUnionInd.assign(group_corr_ind[reduce_ind[k]].begin(), group_corr_ind[reduce_ind[k]].end());
-        }
-        else{
-            subUnionInd.assign(group_corr_ind[k].begin(), group_corr_ind[k].end());
-        }
+        float cluster_center_score = scores[remained_est_ind[k]]; //初始聚类中心分数
+        subUnionInd.assign(group_corr_ind[remained_est_ind[k]].begin(), group_corr_ind[remained_est_ind[k]].end());
 
         for(int j = 1; j < (int )clusterTrans[index].indices.size(); j ++){
             int m = clusterTrans[index].indices[j];
-            float current_score = clique_reduce ? scores[reduce_ind[m]] :scores[m];
+            float current_score = scores[remained_est_ind[m]]; //local score
             if (current_score > cluster_center_score){ //分数最高的设为聚类中心 8.10
                 k = m;
                 cluster_center_score = current_score;
             }
-            if(clique_reduce){
-                subUnionInd = vectors_union(subUnionInd, group_corr_ind[reduce_ind[m]]);
-            }
-            else{
-                subUnionInd = vectors_union(subUnionInd, group_corr_ind[m]);
-            }
+            subUnionInd = vectors_union(subUnionInd, group_corr_ind[remained_est_ind[m]]);
         }
 
         for (int l = 0; l < (int )subUnionInd.size(); ++l) {
@@ -1178,6 +1187,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
 #pragma omp parallel for
     for(int i = 0; i < (int )est_trans2.size(); i++){
         double cluster_eva_score;
+        //cluster_eva_score = OAMAE_1tok(cloud_src_kpts, cloud_des_kpts, est_trans2[i], one2k_match, inlier_thresh);
         cluster_eva_score = OAMAE(cloud_src_kpts, cloud_des_kpts, est_trans2[i], des_src2, inlier_thresh);
 #pragma omp critical
         {
@@ -1262,7 +1272,9 @@ bool registration(const string &name, const string &src_pointcloud, const string
             cout << cluster_eva_corr_ind.size() << " intersection correspondences have " << num << " inlies: "<< num / ((int)cluster_eva_corr_ind.size() / 1.0) * 100 << "%" << endl;
             vector<pair<int, vector<int>>> des_src3;
             make_des_src_pair(cluster_eva_corr, des_src3);
-            best_est = clusterInternalTransEva(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, des_src3, inlier_thresh, GTmat, folderPath);
+            best_est = clusterInternalTransEva1(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, des_src3, inlier_thresh, GTmat, false, folderPath);
+            //1tok
+            //best_est = clusterInternalTransEva1(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, one2k_match, inlier_thresh, GTmat, folderPath);
         }
         else{ //best_est1不在聚类中
             if(score2 > score1){ //best_est2好的情况
@@ -1289,7 +1301,9 @@ bool registration(const string &name, const string &src_pointcloud, const string
                 cout << cluster_eva_corr_ind.size() << " intersection correspondences have " << num << " inlies: "<< num / ((int)cluster_eva_corr_ind.size() / 1.0) * 100 << "%" << endl;
                 vector<pair<int, vector<int>>> des_src3;
                 make_des_src_pair(cluster_eva_corr, des_src3);
-                best_est = clusterInternalTransEva(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, des_src3, inlier_thresh, GTmat, folderPath);
+                best_est = clusterInternalTransEva1(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, des_src3, inlier_thresh, GTmat, false, folderPath);
+                //1tok
+                //best_est = clusterInternalTransEva1(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, des_src3, inlier_thresh, GTmat, folderPath);
             }
             else{ //仅优化best_est1
                 best_index = -1; //不存在类中

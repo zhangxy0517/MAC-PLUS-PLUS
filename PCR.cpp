@@ -678,6 +678,80 @@ Eigen::Matrix4f clusterInternalTransEva(pcl::IndicesClusters &clusterTrans, int 
     //outfile.close();
     return est;
 }
+// 1tok version
+Eigen::Matrix4f clusterInternalTransEva1(pcl::IndicesClusters &clusterTrans, int best_index, Eigen::Matrix4f &initial, vector<Eigen::Matrix3f> &Rs, vector<Eigen::Vector3f> &Ts,
+                                         PointCloudPtr& src_kpts, PointCloudPtr& des_kpts, vector<pair<int, vector<int>>> &des_src, float thresh, Eigen::Matrix4f& GTmat, bool _1tok ,string folderpath){
+
+    //string cluster_eva = folderpath + "/cluster_eva.txt";
+    //ofstream outfile(cluster_eva, ios::trunc);
+    //outfile.setf(ios::fixed, ios::floatfield);
+
+    float RE, TE;
+    bool suc = evaluation_est(initial, GTmat, 15, 30, RE, TE);
+
+
+    Eigen::Matrix3f R_initial = initial.topLeftCorner(3,3);
+    Eigen::Vector3f T_initial = initial.block(0, 3, 3, 1);
+    float max_score = 0.0;
+    if(_1tok){
+        max_score = OAMAE_1tok(src_kpts, des_kpts, initial, des_src, thresh);
+    }
+    else{
+        max_score = OAMAE(src_kpts, des_kpts, initial, des_src, thresh);
+    }
+    cout << "Center est: " << suc << ", RE = " << RE << ", TE = " << TE << ", score = " << max_score << endl;
+    //outfile << setprecision(4) << RE << " " << TE << " " << max_score << " "<< suc <<  endl;
+    Eigen::Matrix4f est = initial;
+
+    //统计类内R T差异情况
+    vector<pair<float, float>> RTdifference;
+    int n = 0;
+    for(int i = 0; i < clusterTrans[best_index].indices.size(); i++){
+        int ind = clusterTrans[best_index].indices[i];
+        Eigen::Matrix3f R = Rs[ind];
+        Eigen::Vector3f T = Ts[ind];
+        float R_diff = calculate_rotation_error(R, R_initial);
+        float T_diff = calculate_translation_error(T, T_initial);
+        RTdifference.emplace_back(R_diff, T_diff);
+    }
+    ///TODO RTdifference排序
+    sort(RTdifference.begin(), RTdifference.end());
+    int i = 0, cnt = 10;
+    while(i < min(100, (int)clusterTrans[best_index].indices.size()) && cnt > 0){ ///TODO 第一个mat可能与initial一样
+        //继续缩小解空间
+        if(!isfinite(RTdifference[i].first) || !isfinite(RTdifference[i].second)) {
+            i++;
+            continue;
+        }
+        int ind = clusterTrans[best_index].indices[i];
+        Eigen::Matrix4f mat;
+        mat.setIdentity();
+        mat.block(0, 3, 3, 1) = Ts[ind];
+        mat.topLeftCorner(3,3) = Rs[ind];
+        if(i > 0 && (est.inverse() * mat - Eigen::Matrix4f::Identity(4, 4)).norm() < 0.01){
+            break;
+        }
+        suc = evaluation_est(mat, GTmat, 15, 30, RE, TE);
+        float score = 0.0;
+        if (_1tok) {
+            score = OAMAE_1tok(src_kpts, des_kpts, mat, des_src, thresh);
+        }
+        else{
+            score = OAMAE(src_kpts, des_kpts, mat, des_src, thresh);
+        }
+
+        //outfile << setprecision(4) << RE << " " << TE << " " << score << " "<< suc <<endl;
+        if(score > max_score){
+            max_score = score;
+            est = mat;
+            cout << "Est in cluster: " << suc << ", RE = " << RE << ", TE = " << TE  << ", score = " << score  <<endl;
+            cnt--;
+        }
+        i++;
+    }
+    //outfile.close();
+    return est;
+}
 
 void make_des_src_pair(const vector<Corre_3DMatch>& correspondence, vector<pair<int, vector<int>>>& des_src){ //需要读取保存的kpts, 匹配数据按照索引形式保存
     assert(correspondence.size() > 1);

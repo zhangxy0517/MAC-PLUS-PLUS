@@ -159,4 +159,6 @@ void find_clique_of_node2(Eigen::MatrixXf& Graph, igraph_vector_int_list_t* cliq
 void getCorrPatch(vector<Corre_3DMatch>&sampled_corr, PointCloudPtr &src, PointCloudPtr &des, PointCloudPtr &src_batch, PointCloudPtr &des_batch, float radius);
 Eigen::Matrix4f clusterInternalTransEva(pcl::IndicesClusters &clusterTrans, int best_index, Eigen::Matrix4f &initial, vector<Eigen::Matrix3f> &Rs, vector<Eigen::Vector3f> &Ts,
                                          PointCloudPtr& src_kpts, PointCloudPtr& des_kpts, vector<pair<int, vector<int>>> &des_src, float thresh, Eigen::Matrix4f& GTmat, string folderpath);
+Eigen::Matrix4f clusterInternalTransEva1(pcl::IndicesClusters &clusterTrans, int best_index, Eigen::Matrix4f &initial, vector<Eigen::Matrix3f> &Rs, vector<Eigen::Vector3f> &Ts,
+                                         PointCloudPtr& src_kpts, PointCloudPtr& des_kpts, vector<pair<int, vector<int>>> &des_src, float thresh, Eigen::Matrix4f& GTmat, bool _1tok ,string folderpath);
 #endif
