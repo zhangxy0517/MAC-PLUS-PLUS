@@ -116,7 +116,7 @@ void find_index_for_corr(PointCloudPtr &src, PointCloudPtr &des, vector<Corre_3D
     return;
 }
 
-bool registration(const string &name, const string &src_pointcloud, const string &des_pointcloud, const string &corr_path, const string &label_path, const string &ov_label, const string &gt_mat, const string &folderPath, const string &descriptor, double& time_epoch, double& mem_epoch, float &RE, float &TE) {
+bool registration(const string &name, const string &src_pointcloud, const string &des_pointcloud, const string &corr_path, const string &label_path, const string &ov_label, const string &gt_mat, const string &folderPath, const string &descriptor, double& time_epoch, double& mem_epoch, vector<double>& time_number, float &RE, float &TE, int &correct_est_num, int &inlier_num, int &total_num, vector<double>&pred_inlier) {
     bool sc2 = true;
     bool use_icp = false;
     bool instance_equal = true;
@@ -189,7 +189,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     pcl::PointCloud<pcl::Normal>::Ptr normal_des(new pcl::PointCloud<pcl::Normal>);
     vector<Corre_3DMatch>correspondence;
     vector<int>true_corre;
-    int inlier_num = 0;
+    inlier_num = 0;
     float resolution = 0;
     bool kitti = false;
     Eigen::Matrix4f GTmat;
@@ -452,7 +452,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
         }
     }
 
-    int total_num = correspondence.size();
+    total_num = correspondence.size();
     while (!feof(gt))
     {
         int value;
@@ -492,16 +492,16 @@ bool registration(const string &name, const string &src_pointcloud, const string
     RE = RE_thresh;
     TE = TE_thresh;
     std::chrono::time_point<std::chrono::system_clock> start, end;
-    std::chrono::duration<double> elapsed_time, total_time;
-
+    std::chrono::duration<double> elapsed_time;
+    time_number.clear();
 /********************************构图****************************************/
     start = std::chrono::system_clock::now();
     Eigen::MatrixXf Graph = Graph_construction(correspondence, resolution, sc2, name, descriptor, inlier_thresh);
     end = std::chrono::system_clock::now();
     elapsed_time = end - start;
     time_epoch += std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count();
-    total_time += elapsed_time;
-    cout << " graph construction: " << elapsed_time.count() << endl;
+    time_number[0] = elapsed_time.count();
+    //cout << " graph construction: " << elapsed_time.count() << endl;
     if (Graph.norm() == 0) {
         cout << "Graph is disconnected. You may need to check the compatibility threshold!" << endl;
         return false;
@@ -728,7 +728,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     end = std::chrono::system_clock::now();
     elapsed_time = end - start;
     time_epoch += std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count();
-    total_time += elapsed_time;
+    time_number[1] = elapsed_time.count();
 
     if (clique_num == 0) {
         //若搜索不到团，提示无法配准
@@ -783,12 +783,11 @@ bool registration(const string &name, const string &src_pointcloud, const string
     }
     outFile2.close();
 
-
     end = std::chrono::system_clock::now();
     elapsed_time = end - start;
     time_epoch += std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count();
-    total_time += elapsed_time;
-    cout << " clique selection: " << elapsed_time.count() << endl;
+    time_number[2] = elapsed_time.count();
+    //cout << " clique selection: " << elapsed_time.count() << endl;
 
     PointCloudPtr src_corr_pts(new pcl::PointCloud<pcl::PointXYZ>);
     PointCloudPtr des_corr_pts(new pcl::PointCloud<pcl::PointXYZ>);
@@ -962,9 +961,9 @@ bool registration(const string &name, const string &src_pointcloud, const string
         cout<< "NO CORRECT ESTIMATION!!!" << endl;
     }
 
-    cout << success_num << " : " << max_num << " : " << total_estimate << " : " << clique_num << endl;
-    cout << min_size << " : " << max_size << " : " << selected_size << endl;
-
+    //cout << success_num << " : " << max_num << " : " << total_estimate << " : " << clique_num << endl;
+    //cout << min_size << " : " << max_size << " : " << selected_size << endl;
+    correct_est_num = success_num;
 /******************************************聚类参数设置***************************************************/
     float angle_thresh;
     float dis_thresh;
@@ -1306,8 +1305,8 @@ bool registration(const string &name, const string &src_pointcloud, const string
     end = std::chrono::system_clock::now();
     elapsed_time = end - start;
     time_epoch += std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count();
-    total_time += elapsed_time;
-    cout << " post evaluation: " << elapsed_time.count() << endl;
+    time_number[3] =  elapsed_time.count();
+    //cout << " post evaluation: " << elapsed_time.count() << endl;
 
     Eigen::Matrix4f tmp_best;
     if (name == "U3M")
@@ -1323,6 +1322,34 @@ bool registration(const string &name, const string &src_pointcloud, const string
         tmp_best = best_est;
         best_score = 0;
         post_refinement(sampled_corr, sampled_corr_src, sampled_corr_des, best_est, best_score, inlier_thresh, 20, metric);
+
+        vector<int> pred_inlier_index;
+        PointCloudPtr src_trans(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::transformPointCloud(*src_corr_pts, *src_trans, best_est);
+        int cnt = 0;
+        int t = 0;
+        for (int j = 0; j < correspondence.size(); j++)
+        {
+            double dist = Distance(src_trans->points[j], des_corr_pts->points[j]);
+            if (dist < inlier_thresh){
+                cnt ++;
+                if (true_corre[j]){
+                    t ++;
+                }
+            }
+        }
+
+        double IP = 0, IR = 0, F1 = 0;
+        if(cnt > 0) IP = t / (cnt / 1.0);
+        if(inlier_num > 0) IR = t / (inlier_num / 1.0);
+        if( IP && IR){
+            F1 = 2.0 / (1.0 /IP + 1.0 / IR);
+        }
+        cout << IP << " " << IR << " " << F1 << endl;
+        pred_inlier.push_back(IP);
+        pred_inlier.push_back(IR);
+        pred_inlier.push_back(F1);
+
         //ICP
         if(use_icp){
             pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
@@ -1391,7 +1418,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
             int id = clusterTrans[cluster_id].indices[j];
             if(est_vector[id].flag){
                 outFile_correct << setprecision(4) << trans->points[id].x << ',' << trans->points[id].y << ',' << trans->points[id].z << ',' << r << ',' << g << ',' << b <<endl;
-                cout << "Correct est in cluster " << cluster_id << " (" << sortCluster[i].score << ")" << endl;
+                //cout << "Correct est in cluster " << cluster_id << " (" << sortCluster[i].score << ")" << endl;
             }
             if(cluster_id == best_index) outFile_selected << setprecision(4) << trans->points[id].x << ',' << trans->points[id].y << ',' << trans->points[id].z << ',' << r << ',' << g << ',' << b <<endl;
             outFile << setprecision(4) << trans->points[id].x << ',' << trans->points[id].y << ',' << trans->points[id].z << ',' << r << ',' << g << ',' << b <<endl;
@@ -1523,28 +1550,25 @@ int main(int argc, char** argv){
     int iterNum = 1;
     for(int i = 0; i < iterNum; i++){
         double time_epoch = 0.0, mem_epoch = 0.0;
+        vector<double> time_number(4, 0);
+        vector<double> pred_inlier;
         float re, te;
-        bool success = registration(datasetName, src_cloud, tgt_cloud, corr_path, gt_label_path, ov_label, gt_mat_path, folderPath, desc, time_epoch, mem_epoch, re, te);
+        int correct_est_num = 0;
+        int inlier_num=0, total_num=0;
+        bool success = registration(datasetName, src_cloud, tgt_cloud, corr_path, gt_label_path, ov_label, gt_mat_path, folderPath, desc, time_epoch, mem_epoch,time_number, re, te, correct_est_num, inlier_num, total_num, pred_inlier);
         ofstream out;
         if(success){
             string eva_result = folderPath + "/eva.txt";
             out.open(eva_result.c_str(), ios::out);
             out.setf(ios::fixed, ios::floatfield);
-            out << setprecision(4) << re << " " << te << endl;
+            out << setprecision(4) << re << " " << te << " " << correct_est_num << endl;
             out.close();
         }
 
-        string mem_info = folderPath + '/' + to_string(i) + "@mem.txt";
-        string time_info = folderPath + '/' + to_string(i) + "@time.txt";
-
-        out.open(time_info.c_str(), ios::out);
+        string info = folderPath + "/status.txt";
+        out.open(info.c_str(), ios::out);
         out.setf(ios::fixed, ios::floatfield);
-        out << setprecision(4) << time_epoch << endl;
-        out.close();
-
-        out.open(mem_info.c_str(), ios::out);
-        out.setf(ios::fixed, ios::floatfield);
-        out << setprecision(4) << mem_epoch << endl;
+        out << setprecision(4) << time_epoch << " " << mem_epoch << " " << correct_est_num <<" " << inlier_num << " " << total_num  << " " << pred_inlier[0] << " " << pred_inlier[1] << " " << pred_inlier[2] << endl;
         out.close();
     }
 }

@@ -30,21 +30,10 @@ bool compare_local_score(const local &l1, const local &l2){
     return l1.score > l2.score;
 }
 
-bool compare_vote_degree(const Vote_exp& v1, const Vote_exp& v2) {
-	return v1.degree > v2.degree;
-}
-
 bool compare_corres_ind(const Corre_3DMatch& c1, const Corre_3DMatch& c2){
     return c1.des_index < c2.des_index;
 }
 
-bool compare_corres_score(const Corre_3DMatch& c1, const Corre_3DMatch& c2) {
-	return c1.score > c2.score;
-}
-
-bool compare_vector_size(const local &l1, const local &l2){
-    return l1.clique_ind_score.size() < l2.clique_ind_score.size();
-}
 
 Eigen::MatrixXf Graph_construction(vector<Corre_3DMatch>& correspondence, float resolution, bool sc2, const string &name, const string &descriptor, float inlier_thresh) {
 	int size = correspondence.size();
@@ -83,7 +72,7 @@ Eigen::MatrixXf Graph_construction(vector<Corre_3DMatch>& correspondence, float 
 				src_dis = Distance(c1.src, c2.src);
 				des_dis = Distance(c1.des, c2.des);
 				dis = abs(src_dis - des_dis);
-                if(c1.des_index != c2.des_index && src_dis > 0.05 && des_dis > 0.05){
+                //if(c1.des_index != c2.des_index && src_dis > 0.05 && des_dis > 0.05){
                     if (descriptor == "predator" || low_inlieratio)
                     {
                         score = 1.0 - (dis * dis) / (inlier_thresh * inlier_thresh);
@@ -117,7 +106,7 @@ Eigen::MatrixXf Graph_construction(vector<Corre_3DMatch>& correspondence, float 
                             // >=1000 0.99 <1000 0.9
                         }
                     }
-                }
+               // }
 				cmp_score(i, j) = score;
 				cmp_score(j, i) = score;
 			}
@@ -438,19 +427,6 @@ void find_clique_of_node2(Eigen::MatrixXf& Graph, igraph_vector_int_list_t* cliq
     return;
 }
 
-void sort_eigenvector(Eigen::VectorXd& eigenvector, Eigen::VectorXd& sorted_eigenvector, Eigen::VectorXi& index_eigenvector) {
-	sorted_eigenvector = eigenvector;
-	index_eigenvector = VectorXi::LinSpaced(eigenvector.size(), 0, eigenvector.size() - 1);
-	auto rule = [eigenvector](int i, int j)->bool {
-		return eigenvector(i) > eigenvector(j);
-	};
-	sort(index_eigenvector.data(), index_eigenvector.data() + index_eigenvector.size(), rule);
-	for (size_t i = 0; i < eigenvector.size(); i++)
-	{
-		sorted_eigenvector(i) = eigenvector(index_eigenvector(i));
-	}
-}
-
 //保存数据,需要与寻找法向量部分组合
 void savetxt(vector<Corre_3DMatch>corr, const string& save_path) {
 	ofstream outFile;
@@ -531,6 +507,31 @@ int clusterTransformationByRotation(vector<Eigen::Matrix3f> &Rs, vector<Eigen::V
         }
     }
     return 0;
+}
+
+float OAMAE_1tok(PointCloudPtr& raw_src, PointCloudPtr& raw_des, Eigen::Matrix4f &est, vector<pair<int, vector<int>>> &src_des, float thresh){
+    float score = 0.0;
+    PointCloudPtr src_trans(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::transformPointCloud(*raw_src, *src_trans, est);
+    for(auto & i : src_des){
+        int src_ind = i.first;
+        vector<int> des_ind = i.second;
+        float num = 0.0;
+        float dis = 0.0;
+        if(!pcl::isFinite(src_trans->points[src_ind])) continue;
+        for(auto & e : des_ind){
+            //计算距离
+            float distance = Distance(src_trans->points[src_ind], raw_des->points[e]);
+            if (distance < thresh)
+            {
+                num++;
+                dis += (thresh - distance) / thresh;
+            }
+        }
+        score += num > 0 ? (dis / num) : 0;
+    }
+    src_trans.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    return score;
 }
 
 float OAMAE(PointCloudPtr& raw_src, PointCloudPtr& raw_des, Eigen::Matrix4f &est, vector<pair<int, vector<int>>> &des_src, float thresh){

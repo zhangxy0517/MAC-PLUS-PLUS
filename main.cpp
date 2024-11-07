@@ -49,6 +49,7 @@ string ETH[4] = {
 
 double RE, TE, success_estimate_rate;
 vector<int>scene_num;
+int cnt;
 vector<string> analyse(const string& name, const string& result_scene, const string& dataset_scene, const string& descriptor, ofstream& outfile, int iters, int data_index) {
     if (!no_logs && access(result_scene.c_str(), 0))
     {
@@ -85,7 +86,7 @@ vector<string> analyse(const string& name, const string& result_scene, const str
         error_pair.push_back(line);
     }
     f1.close();
-    scene_num.push_back(error_pair.size());
+    //scene_num.push_back(error_pair.size());
     vector<string>match_success_pair;
     int index = 1;
     RE = 0;
@@ -93,6 +94,7 @@ vector<string> analyse(const string& name, const string& result_scene, const str
     success_estimate_rate = 0;
     vector<double>time;
     vector<int>clique_size;
+    cnt = 0;
     for (const auto& pair : error_pair)
     {
         time.clear();
@@ -108,6 +110,7 @@ vector<string> analyse(const string& name, const string& result_scene, const str
         string gt_label = dataset_scene + "/" + pair + (descriptor == "fcgf" ? "@label_fcgf.txt" : "@label.txt");
         string gt_mat_path = dataset_scene + "/" + pair + (descriptor == "fcgf" ? "@GTmat_fcgf.txt" : "@GTmat.txt");
 
+        int inlier_num = 0, total_num = 0;
         //调用 源.cpp
         string ov_label = "NULL";
         //string ov_label = dataset_scene + "/" + pair + "@gt_ov.txt";
@@ -120,6 +123,7 @@ vector<string> analyse(const string& name, const string& result_scene, const str
 
         double re=0, te=0;
         string check_file = result_folder + "/eva.txt";
+        int corrected=0;
         if (access(check_file.c_str(), 0))
         {
             cout << pair << " Fail." << endl;
@@ -134,9 +138,26 @@ vector<string> analyse(const string& name, const string& result_scene, const str
             RE += re;
             TE += te;
             match_success_pair.push_back(pair);
+            corrected=1;
         }
+
+        string status = result_folder + "/status.txt";
+        double mem_epoch, time_epoch;
+        double IP, IR, F1;
+        int correct_est_num;
+        FILE *f = fopen(status.c_str(), "r");
+        fscanf(f, "%lf %lf %d %d %d %lf %lf %lf", &time_epoch, &mem_epoch, &correct_est_num, &inlier_num, &total_num, &IP, &IR, &F1);
+        fclose(f);
+
         cout << endl;
+        outfile << pair << ',' << corrected << ',' << inlier_num << ',' << total_num << ',';
+        outfile << setprecision(4) << inlier_num / (total_num / 1.0) << ',' << re << ',' << te << ','  << time_epoch << ',' << mem_epoch << ',' << correct_est_num  << ',' << IP << ',' << IR << ',' << F1 <<endl;
+
+
+        cout << endl;
+        cnt ++;
     }
+    scene_num.push_back(cnt);
     error_pair.clear();
     return match_success_pair;
 }
@@ -157,7 +178,8 @@ void demo(){
 }
 
 int main(int argc, char** argv) {
-    demo();
+//    demo();
+//    exit(0);
     //////////////////////////////////////////////////////////////////
     add_overlap = false;
     low_inlieratio = false;
@@ -185,6 +207,12 @@ int main(int argc, char** argv) {
     }
 
     if (descriptor == "predator" && (datasetName == "3dmatch" || datasetName == "3dlomatch")) {
+        string analyse_csv = resultPath + "/" + datasetName + "_predator.csv";
+        ofstream outFile;
+        outFile.open(analyse_csv.c_str(), ios::out);
+        outFile.setf(ios::fixed, ios::floatfield);
+        outFile << "pair_name" << ',' << "corrected_or_no" << ',' << "inlier_num" << ',' << "total_num" << ','
+                << "inlier_ratio" << ',' << "RE" << ',' << "TE" << endl;
         vector<string>pairs;
         string loader = datasetPath + "/dataload.txt";
         cout << loader << endl;
@@ -200,18 +228,56 @@ int main(int argc, char** argv) {
         {
             cout << "Pair " << i + 1 << "，total" << pairs.size()/*name_list.size()*/ << endl;
             string filename = pairs[i];
-            string corr_path = datasetPath + "/" + filename + "@corr.txt";
-            string gt_mat_path = datasetPath + "/" + filename + "@GTmat.txt";
-            string gt_label_path = datasetPath + "/" + filename + "@label.txt";
+            string corr_path = datasetPath + "/" + filename + "/corr_data.txt";
+            string gt_mat_path = datasetPath + "/" + filename + "/GTmat.txt";
+            string gt_label_path = datasetPath + "/" + filename + "/label.txt";
+            string src_filename = "NULL";
+            string des_filename = "NULL";
             string ov_label = "NULL";
             if(add_overlap){
                 ov_label = datasetPath + "/" + filename + "@gt_ov.txt";
             }
             folderPath = resultPath + "/" + filename;
-            string cmd = program_name + " " + datasetName + " " + corr_path + " " + gt_label_path + " " + gt_mat_path + " " + ov_label + " " + folderPath +  " " + descriptor;
+            string cmd = program_name + " " + datasetName + " " + src_filename + " " + des_filename + " " + corr_path + " " + gt_label_path + " " + gt_mat_path + " " + ov_label + " " + folderPath +  " " + descriptor;
             system(cmd.c_str());
+
+            int inlier_num =0 , total_num  =0;
+            double re=0, te=0;
+            string check_file = folderPath + "/eva.txt";
+            int corrected = 0;
+            if (access(check_file.c_str(), 0))
+            {
+                cout << check_file << " Fail." << endl;
+                corrected = 0;
+            }
+            else
+            {
+                FILE *f = fopen(check_file.c_str(), "r");
+                fscanf(f, "%lf %lf", &re, &te);
+                fclose(f);
+                //if(re <= re_thresh && te <= te_thresh){
+                cout << filename << " Success." << endl;
+                corrected = 1;
+                RE += re;
+                TE += te;
+
+            }
+
+            //info
+            string status = folderPath + "/status.txt";
+            double mem_epoch, time_epoch;
+            vector<double> time_number(4, 0);
+            int correct_est_num;
+            FILE *f = fopen(status.c_str(), "r");
+            fscanf(f, "%lf %lf %d %d %d %lf %lf %lf %lf", &time_epoch, &mem_epoch, &correct_est_num, &inlier_num, &total_num, &time_number[0], &time_number[1], &time_number[2], &time_number[3]);
+            fclose(f);
+
             cout << endl;
+            outFile << filename << ',' << corrected << ',' << inlier_num << ',' << total_num << ',';
+            outFile << setprecision(4) << inlier_num / (total_num / 1.0) << ',' << re << ',' << te << ','  << time_epoch << ',' << mem_epoch << ',' << correct_est_num << ',';
+            outFile << setprecision(4) << time_number[0] << ',' << time_number[1] << ',' << time_number[2] << ',' << time_number[3] << endl;
         }
+
         int iter_num = 1;
         cout << "Avg Time:" << endl;
         for(int i = 0; i < iter_num; i++){
@@ -235,32 +301,28 @@ int main(int argc, char** argv) {
             avg_time /= (n2 / 1.0);
             cout << avg_time << endl;
         }
+
+        outFile.close();
     }
     else if (datasetName == "3dlomatch") {
         for (size_t i = id; i < 8; i++) {
             string analyse_csv = resultPath + "/" + threeDlomatch[i] + "_" + descriptor + ".csv";
             ofstream outFile;
-//            outFile.open(analyse_csv.c_str(), ios::out);
-//            outFile.setf(ios::fixed, ios::floatfield);
-//            outFile << "pair_name" << ',' << "corrected_or_no" << ',' << "inlier_num" << ',' << "total_num" << ','
-//                    << "inlier_ratio" << ',' << "est_rr" << ',' << "RE" << ',' << "TE" << endl;
+            outFile.open(analyse_csv.c_str(), ios::out);
+            outFile.setf(ios::fixed, ios::floatfield);
+            outFile << "pair_name" << ',' << "corrected_or_no" << ',' << "inlier_num" << ',' << "total_num" << ','
+                    << "inlier_ratio" << ',' << "RE" << ',' << "TE" << ',' << "time" << ',' << "mem" << ',' << "IP" << ',' << "IR" << ',' << "F1" <<endl;
             vector<string>matched = analyse("3dlomatch", resultPath + "/" + threeDlomatch[i],datasetPath + "/" + threeDlomatch[i], descriptor, outFile, id, i);
             scene_re_sum.push_back(RE);
             scene_te_sum.push_back(TE);
-            if (!matched.empty())
-            {
-                cout << endl;
-                cout << threeDlomatch[i] << ":" << endl;
-                for (auto t : matched)
-                {
-                    cout << "\t" << t << endl;
-                }
-                cout << endl;
-                cout << threeDlomatch[i] << ":" << matched.size() / (scene_num[i] / 1.0) << endl;
-                cout << "RE:" << RE / matched.size() << "\tTE:" << TE / matched.size() << endl;
-                corrected += matched.size();
-                scene_correct_num.push_back(matched.size());
-            }
+
+            cout << endl;
+            cout << threeDlomatch[i] << ":" << endl;
+            cout << endl;
+            cout << threeDlomatch[i] << ":" << matched.size() / (scene_num[i] / 1.0) << endl;
+            cout << "RE:" << RE / matched.size() << "\tTE:" << TE / matched.size() << endl;
+            corrected += matched.size();
+            scene_correct_num.push_back(matched.size());
             outFile.close();
             matched.clear();
         }
@@ -291,6 +353,197 @@ int main(int argc, char** argv) {
         cout << "\tTE: " << total_te / (corrected / 1.0) << endl;
         outFile << "\tTE: " << setprecision(4) << total_te / (corrected / 1.0) << endl;
         outFile.close();
+    }
+    else if (datasetName == "3dmatch"){
+        for (size_t i = id; i < 8; i++) {
+            string analyse_csv = resultPath + "/" + threeDMatch[i] + "_" + descriptor + ".csv";
+            ofstream outFile;
+            outFile.open(analyse_csv.c_str(), ios::out);
+            outFile.setf(ios::fixed, ios::floatfield);
+            outFile << "pair_name" << ',' << "corrected_or_no" << ',' << "inlier_num" << ',' << "total_num" << ','
+                    << "inlier_ratio" << ',' << "RE" << ',' << "TE" << ',' << "time" << ',' << "mem" << ',' << "IP" << ',' << "IR" << ',' << "F1" <<endl;
+            vector<string>matched = analyse("3dmatch", resultPath + "/" + threeDMatch[i],datasetPath + "/" + threeDMatch[i], descriptor, outFile, id, i);
+            scene_re_sum.push_back(RE);
+            scene_te_sum.push_back(TE);
+            cout << endl;
+            cout << threeDMatch[i] << ":" << endl;
+            cout << endl;
+            cout << threeDMatch[i] << ":" << matched.size() / (scene_num[i] / 1.0) << endl;
+            cout << "RE:" << RE / matched.size() << "\tTE:" << TE / matched.size() << endl;
+            corrected += matched.size();
+            scene_correct_num.push_back(matched.size());
+            outFile.close();
+            matched.clear();
+        }
+        string detail_txt = resultPath + "/details.txt";
+        ofstream outFile;
+        outFile.open(detail_txt.c_str(), ios::out);
+        outFile.setf(ios::fixed, ios::floatfield);
+        for (size_t i = 0; i < 8; i++)
+        {
+            total_num += scene_num[i];
+            total_re += scene_re_sum[i];
+            total_te += scene_te_sum[i];
+            cout << i + 1 << ":" << endl;
+            outFile << i + 1 << ":" << endl;
+            cout << "\tRR: " << scene_correct_num[i] << "/" << scene_num[i] << " " << scene_correct_num[i] / (scene_num[i] / 1.0) << endl;
+            outFile << "\tRR: " << scene_correct_num[i] << "/" << scene_num[i] << " " << setprecision(4) << scene_correct_num[i] / (scene_num[i] / 1.0) << endl;
+            cout << "\tRE: " << scene_re_sum[i] / (scene_correct_num[i] / 1.0) << endl;
+            outFile << "\tRE: " << setprecision(4) << scene_re_sum[i] / (scene_correct_num[i] / 1.0) << endl;
+            cout << "\tTE: " << scene_te_sum[i] / (scene_correct_num[i] / 1.0) << endl;
+            outFile << "\tTE: " << setprecision(4) << scene_te_sum[i] / (scene_correct_num[i] / 1.0) << endl;
+        }
+        cout << "total:" << endl;
+        outFile << "total:" << endl;
+        cout << "\tRR: " << corrected / (total_num / 1.0) << endl;
+        outFile << "\tRR: " << setprecision(4) << corrected / (total_num / 1.0) << endl;
+        cout << "\tRE: " << total_re / (corrected / 1.0) << endl;
+        outFile << "\tRE: " << setprecision(4) << total_re / (corrected / 1.0) << endl;
+        cout << "\tTE: " << total_te / (corrected / 1.0) << endl;
+        outFile << "\tTE: " << setprecision(4) << total_te / (corrected / 1.0) << endl;
+        outFile.close();
+    }
+    else if (datasetName == "ETH")
+    {
+        for (size_t i = id; i < 4; i++)
+        {
+            cout << i + 1 << ":" << ETH[i] << endl;
+            string analyse_csv = resultPath + "/" + ETH[i] + "_" + descriptor + ".csv";
+            ofstream outFile;
+//            outFile.open(analyse_csv.c_str(), ios::out);
+//            outFile.setf(ios::fixed, ios::floatfield);
+//            outFile << "pair_name" << ',' << "corrected_or_no" << ',' << "inlier_num" << ',' << "total_num" << ',' << "inlier_ratio" << ',' << "est_rr" << ',' << "RE" << ',' << "TE" << ',' << "construction" << ',' << "search" << ',' << "selection" << ',' << "estimation" << endl;
+            vector<string>matched = analyse("3dmatch", resultPath + "/" + ETH[i], datasetPath + "/" + ETH[i], descriptor, outFile, id, i);
+            scene_re_sum.push_back(RE);
+            scene_te_sum.push_back(TE);
+            if (!matched.empty())
+            {
+                cout << endl;
+                cout << ETH[i] << ":" << endl;
+                for (auto t : matched)
+                {
+                    cout << "\t" << t << endl;
+                }
+                cout << endl;
+                cout << ETH[i] << ":" << matched.size() << endl;
+                cout << "success_est_rate:" << success_estimate_rate / (scene_num[i] / 1.0) << "RE:" << RE / matched.size() << "\tTE:" << TE / matched.size() << endl;
+                corrected += matched.size();
+                //total_success_est_rate.push_back(success_estimate_rate);
+                scene_correct_num.push_back(matched.size());
+            }
+            outFile.close();
+            matched.clear();
+        }
+        string detail_txt = resultPath + "/details.txt";
+        ofstream outFile;
+        outFile.open(detail_txt.c_str(), ios::out);
+        outFile.setf(ios::fixed, ios::floatfield);
+        for (size_t i = 0; i < 4; i++)
+        {
+            total_num += scene_num[i];
+            total_re += scene_re_sum[i];
+            total_te += scene_te_sum[i];
+            cout << i + 1 << ":" << endl;
+            outFile << i + 1 << ":" << endl;
+            cout << "\tRR: " << scene_correct_num[i] << "/" << scene_num[i] << " " << scene_correct_num[i] / (scene_num[i] / 1.0) << endl;
+            outFile << "\tRR: " << scene_correct_num[i] << "/" << scene_num[i] << " " << setprecision(4) << scene_correct_num[i] / (scene_num[i] / 1.0) << endl;
+           // cout << "\tSuccess_est_rate: " << total_success_est_rate[i] / (scene_num[i] / 1.0) << endl;
+            cout << "\tRE: " << scene_re_sum[i] / (scene_correct_num[i] / 1.0) << endl;
+            outFile << "\tRE: " << setprecision(4) << scene_re_sum[i] / (scene_correct_num[i] / 1.0) << endl;
+            cout << "\tTE: " << scene_te_sum[i] / (scene_correct_num[i] / 1.0) << endl;
+            outFile << "\tTE: " << setprecision(4) << scene_te_sum[i] / (scene_correct_num[i] / 1.0) << endl;
+        }
+        cout << "total:" << endl;
+        outFile << "total:" << endl;
+        cout << "\tRR: " << corrected / (total_num / 1.0) << endl;
+        outFile << "\tRR: " << setprecision(4) << corrected / (total_num / 1.0) << endl;
+        //cout << "\tSuccess_est_rate: " << accumulate(total_success_est_rate.begin(), total_success_est_rate.end(), 0.0) / (total_num / 1.0) << endl;
+        cout << "\tRE: " << total_re / (corrected / 1.0) << endl;
+        outFile << "\tRE: " << setprecision(4) << total_re / (corrected / 1.0) << endl;
+        cout << "\tTE: " << total_te / (corrected / 1.0) << endl;
+        outFile << "\tTE: " << setprecision(4) << total_te / (corrected / 1.0) << endl;
+        outFile.close();
+    }
+    else if (datasetName == "KITTI"){
+        int pair_num = 1260;
+        //string txt_path = datasetPath + "/" + descriptor;
+        const string& txt_path = datasetPath;
+        string analyse_csv = resultPath + "/KITTI_" + descriptor + ".csv";
+        ofstream outFile;
+        outFile.open(analyse_csv.c_str(), ios::out);
+        outFile.setf(ios::fixed, ios::floatfield);
+        outFile << "pair_name" << ',' << "corrected_or_no" << ',' << "inlier_num" << ',' << "total_num" << ',' << "inlier_ratio" << ',' << "RE" << ',' << "TE" << endl;
+        vector<string>fail_pair;
+        vector<double>time;
+        for (int i = id; i < pair_num; i++)
+        {
+            time.clear();
+            cout << "Pair " << i + 1 << "，total" << pair_num/*name_list.size()*/ << "，fail " << fail_pair.size() << endl;
+
+            string filename = to_string(i);/*name_list[i]*/;
+            string corr_path = txt_path + "/" + filename + '/' + descriptor + "@corr.txt";
+            string gt_mat_path = txt_path + "/" + filename + '/' + descriptor + "@gtmat.txt";
+            string gt_label_path = txt_path + "/" + filename + '/' + descriptor + "@gtlabel.txt";
+            string src_filename = "NULL";
+            string des_filename = "NULL";
+            string ov_label = "NULL";
+            if(add_overlap){
+                ov_label = datasetPath + "/" + filename + "@gt_ov.txt";
+            }
+            folderPath = resultPath + "/" + filename;
+
+            double re, te;
+            double inlier_ratio, success_estimate, total_estimate;
+
+            string cmd = program_name + " " + datasetName + " " + src_filename + " " + des_filename + " " + corr_path + " " + gt_label_path + " " + gt_mat_path + " " + ov_label + " " + folderPath +  " " + descriptor;
+            system(cmd.c_str());
+
+            int inlier_num =0 , total_num  =0;
+            string check_file = folderPath + "/eva.txt";
+            int corrected = 0;
+            if (access(check_file.c_str(), 0))
+            {
+                cout << check_file << " Fail." << endl;
+                corrected = 0;
+                fail_pair.push_back(filename);
+            }
+            else
+            {
+                FILE *f = fopen(check_file.c_str(), "r");
+                fscanf(f, "%lf %lf", &re, &te);
+                fclose(f);
+                //if(re <= re_thresh && te <= te_thresh){
+                cout << filename << " Success." << endl;
+                corrected = 1;
+                RE += re;
+                TE += te;
+            }
+
+            //info
+            string status = folderPath + "/status.txt";
+            double mem_epoch, time_epoch;
+            vector<double> time_number(4, 0);
+            int correct_est_num;
+            FILE *f = fopen(status.c_str(), "r");
+            fscanf(f, "%lf %lf %d %d %d %lf %lf %lf %lf", &time_epoch, &mem_epoch, &correct_est_num, &inlier_num, &total_num, &time_number[0], &time_number[1], &time_number[2], &time_number[3]);
+            fclose(f);
+
+            cout << endl;
+            outFile << filename << ',' << corrected << ',' << inlier_num << ',' << total_num << ',';
+            outFile << setprecision(4) << inlier_num / (total_num / 1.0) << ',' << re << ',' << te << ','  << time_epoch << ',' << mem_epoch << ',' << correct_est_num << ',';
+            outFile << setprecision(4) << time_number[0] << ',' << time_number[1] << ',' << time_number[2] << ',' << time_number[3] << endl;
+        }
+        outFile.close();
+        double success_num = pair_num - fail_pair.size();
+        cout << "total:" << endl;
+        cout << "\tRR:" << pair_num - fail_pair.size() << "/" << pair_num << " " << success_num / (pair_num / 1.0) << endl;
+        cout << "\tRE:" << RE / (success_num / 1.0) << endl;
+        cout << "\tTE:" << TE / (success_num / 1.0) << endl;
+        cout << "fail pairs:" << endl;
+        for (size_t i = 0; i < fail_pair.size(); i++)
+        {
+            cout << "\t" << fail_pair[i] << endl;
+        }
     }
     else{
         exit(-1);

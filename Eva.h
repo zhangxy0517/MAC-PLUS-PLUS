@@ -126,20 +126,10 @@ void FPFH_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float sup_radiu
 int Voxel_grid_downsample(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& new_cloud,
                       float leaf_size);
 pcl::PointCloud<pcl::PointXYZ>::Ptr getHarris3D_detector(PointCloudPtr cloud, float NMS_radius, vector<int>& key_indices);
-//=======================================
-void boost_rand(int seed, int start, int end, int rand_num, std::vector<int>& idx);
-void Rand_3(int seed, int scale, int& output1, int& output2, int& output3);
-void RANSAC_trans_est(pcl::PointXYZ& point_s1, pcl::PointXYZ& point_s2, pcl::PointXYZ& point_s3,
-	pcl::PointXYZ& point_t1, pcl::PointXYZ& point_t2, pcl::PointXYZ& point_t3, Eigen::Matrix4f& Mat);
-
 /**********************************************Visualization***************************************/
 void visualization(const PointCloudPtr& cloud_src, const PointCloudPtr& cloud_tar, /*PointCloudPtr keyPoint_src, PointCloudPtr keyPoint_tar,*/ Eigen::Matrix4f &Mat, float resolution);
 void visualization(const PointCloudPtr &cloud_src, const PointCloudPtr &cloud_tar, vector<Corre_3DMatch>&match, Eigen::Matrix4d &Mat, float &resolution);
 void visualization(const PointCloudPtr& ov_src,  const PointCloudPtr& cloud_src, const PointCloudPtr& cloud_tar, vector<Corre_3DMatch>& match, Eigen::Matrix4d& Mat, Eigen::Matrix4d& GTmat, float& resolution);
-int RANSAC(vector<Corre_3DMatch> Match, float resolution, int  _Iterations, Eigen::Matrix4f& Mat);
-int RANSAC_score(vector<Corre_3DMatch> Match, float resolution, int  _Iterations, float threshold, Eigen::Matrix4f& Mat, string loss);
-float Score_est(const PointCloudPtr &source_match_points, const PointCloudPtr &target_match_points, Eigen::Matrix4f& Mat, float thresh, string loss);
-
 void RMSE_visualization(const PointCloudPtr& cloud_source, const PointCloudPtr& cloud_target, Eigen::Matrix4f& Mat_est, Eigen::Matrix4f& Mat_GT, float mr);
 float RMSE_compute(const PointCloudPtr& cloud_source, const PointCloudPtr& cloud_target, Eigen::Matrix4f& Mat_est, Eigen::Matrix4f& Mat_GT, float mr);
 float RMSE_compute_scene(PointCloudPtr &cloud_source, PointCloudPtr &cloud_target, Eigen::Matrix4f& Mat_est, Eigen::Matrix4f& Mat_GT, float overlap_thresh);
@@ -151,8 +141,6 @@ void Corres_initial_visual(const PointCloudPtr& cloud_s, const PointCloudPtr& cl
 void Corres_selected_visual(const PointCloudPtr& cloud_s, const PointCloudPtr& cloud_t, vector<Corre_3DMatch>& Hist_match, float& mr, float GT_thresh, Eigen::Matrix4d& GT_Mat);
 void Corres_Viewer_Score(const PointCloudPtr& cloud_s, const PointCloudPtr& cloud_t, vector<Corre_3DMatch>& Hist_match, float& mr, int k);
 bool compare_vote_score(const Vote& v1, const Vote& v2);
-bool compare_vote_degree(const Vote_exp& v1, const Vote_exp& v2);
-bool compare_corres_score(const Corre_3DMatch& c1, const Corre_3DMatch& c2);
 vector<int> vectors_intersection(const vector<int>& v1, const vector<int>& v2);
 vector<int> vectors_union(const vector<int>& v1, const vector<int>& v2);
 float calculate_rotation_error(Eigen::Matrix3f& est, Eigen::Matrix3f& gt);
