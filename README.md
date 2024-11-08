@@ -4,7 +4,7 @@ Source code of [MAC++: Going Further with Maximal Cliques for 3D Registration]()
 ## Introduction
 Maximal cliques (MAC) represent a novel state-of-the-art approach for 3D registration from correspondences, however, it still suffers from extremely severe outliers. In this paper, we introduce a robust learning-free estimator called MAC++, exploring maximal cliques for 3D registration from the following two perspectives:
 1) A novel hypothesis generation method utilizing putative seeds through voting to guide the construction of maximal clique pools, effectively preserving more potential correct hypotheses. 
-2) A progressive hypothesis evaluation method that continuously reduces the solution space in a ``global-clusters-cluster-individual'' manner rather than traditional one-shot techniques, greatly alleviating the issue of missing good hypotheses. 
+2) A progressive hypothesis evaluation method that continuously reduces the solution space in a ''global-clusters-cluster-individual'' manner rather than traditional one-shot techniques, greatly alleviating the issue of missing good hypotheses. 
 
 Experiments conducted on U3M, 3DMatch/3DLoMatch, and KITTI-LC datasets show the new state-of-the-art performance of MAC++. MAC++ demonstrates the capability to handle extremely low inlier ratio data where MAC fails (e.g., showing **27.1\%/30.6\%** registration recall improvements on 3DMatch/3DLoMatch with **<1\%** inliers).
 ![](figures/pipeline.png)
