@@ -1,5 +1,8 @@
 # MAC++: Going Further with Maximal Cliques for 3D Registration
-Source code of [MAC++: Going Further with Maximal Cliques for 3D Registration](). 
+Source code of [MAC++: Going Further with Maximal Cliques for 3D Registration]().
+<div align="center">
+    <img src="figures/pipeline.png" width="1000px">
+</div>
 
 ## Introduction
 Maximal cliques (MAC) represent a novel state-of-the-art approach for 3D registration from correspondences, however, it still suffers from extremely severe outliers. In this paper, we introduce a robust learning-free estimator called MAC++, exploring maximal cliques for 3D registration from the following two perspectives:
@@ -7,7 +10,9 @@ Maximal cliques (MAC) represent a novel state-of-the-art approach for 3D registr
 2) A progressive hypothesis evaluation method that continuously reduces the solution space in a ''global-clusters-cluster-individual'' manner rather than traditional one-shot techniques, greatly alleviating the issue of missing good hypotheses. 
 
 Experiments conducted on U3M, 3DMatch/3DLoMatch, and KITTI-LC datasets show the new state-of-the-art performance of MAC++. MAC++ demonstrates the capability to handle extremely low inlier ratio data where MAC fails (e.g., showing **27.1\%/30.6\%** registration recall improvements on 3DMatch/3DLoMatch with **<1\%** inliers).
-![](figures/pipeline.png)
+<div align="center">
+    <img src="figures/fig1.png" width="500px">
+</div>
 
 ## Build
 MAC depends on [PCL](https://github.com/PointCloudLibrary/pcl/tags) (version `1.12.1` is recommended) and [igraph](https://github.com/igraph/igraph/tags)(`=0.10.6`). Please install these libraries first.
