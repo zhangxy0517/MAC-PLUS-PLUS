@@ -121,6 +121,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     bool use_icp = false;
     bool instance_equal = true;
     bool cluster_internal_eva = true;
+    bool _1tok = true; // in development
     int max_est_num = INT_MAX;
     low_inlieratio = false;
     add_overlap = false;
@@ -473,28 +474,30 @@ bool registration(const string &name, const string &src_pointcloud, const string
     }
     inlier_ratio = inlier_num / (total_num / 1.0);
 
-//    string _1tok = dataPath + '/' + item_name + "@1tok.txt";
-//    fp = fopen(_1tok.c_str(), "r");
-//    if (fp == NULL)
-//    {
-//        printf("1tok File can't open!\n");
-//        return -1;
-//    }
-//    int i = 0;
-//    while (!feof(fp)) {
-//        vector<int>relax_ind;
-//        int value;
-//        for(int j = 0; j < 99; j++){
-//            fscanf(fp, "%d ", &value);
-//            relax_ind.push_back(value);
-//        }
-//        fscanf(fp, "%d\n", &value);
-//        relax_ind.push_back(value);
-//        one2k_match.emplace_back(i, relax_ind);
-//        relax_ind.clear();
-//        i++;
-//    }
-//    fclose(fp);
+    if(_1tok){
+        string _1tok = dataPath + '/' + item_name + "@1tok.txt";
+        fp = fopen(_1tok.c_str(), "r");
+        if (fp == NULL)
+        {
+            printf("1tok File can't open!\n");
+            return -1;
+        }
+        int i = 0;
+        while (!feof(fp)) {
+            vector<int>relax_ind;
+            int value;
+            for(int j = 0; j < 99; j++){
+                fscanf(fp, "%d ", &value);
+                relax_ind.push_back(value);
+            }
+            fscanf(fp, "%d\n", &value);
+            relax_ind.push_back(value);
+            one2k_match.emplace_back(i, relax_ind);
+            relax_ind.clear();
+            i++;
+        }
+        fclose(fp);
+    }
 
 /**********************************不同数据集的阈值参数设置************************************/
     float RE_thresh, TE_thresh, inlier_thresh;
@@ -783,7 +786,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
             num++;
         }
     }
-   ///TODO 注意这里的内点率要比初始匹配内点率高
+   //注意这里的内点率要比初始匹配内点率高
     cout << sampled_ind.size() << " sampled correspondences have " << num << " inlies: "<< num / ((int)sampled_ind.size() / 1.0) * 100 << "%" << endl;
 
     string sampled_corr_txt = folderPath + "/sampled_corr.txt";
@@ -1143,7 +1146,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
         for(int j = 1; j < (int )clusterTrans[index].indices.size(); j ++){
             int m = clusterTrans[index].indices[j];
             float current_score = scores[remained_est_ind[m]]; //local score
-            if (current_score > cluster_center_score){ //分数最高的设为聚类中心 8.10
+            if (current_score > cluster_center_score){ //分数最高的设为聚类中心
                 k = m;
                 cluster_center_score = current_score;
             }
@@ -1159,9 +1162,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
         mat.setIdentity();
         mat.block(0, 3, 3, 1) = Ts[k];
         mat.topLeftCorner(3,3) = Rs[k];
-        //cout << "Cluster " << index << ", score " << cluster_center_score;
-        //post_refinement(subClusterCorr, cluster_src_pts, cluster_des_pts, mat, cluster_center_score, inlier_thresh, 20, metric);
-        //cout << ", after refine " << cluster_center_score << endl;
+
 #pragma omp critical
         {
             globalUnionInd = vectors_union(globalUnionInd,subUnionInd);
@@ -1187,8 +1188,12 @@ bool registration(const string &name, const string &src_pointcloud, const string
 #pragma omp parallel for
     for(int i = 0; i < (int )est_trans2.size(); i++){
         double cluster_eva_score;
-        //cluster_eva_score = OAMAE_1tok(cloud_src_kpts, cloud_des_kpts, est_trans2[i], one2k_match, inlier_thresh);
-        cluster_eva_score = OAMAE(cloud_src_kpts, cloud_des_kpts, est_trans2[i], des_src2, inlier_thresh);
+        if(_1tok){
+            cluster_eva_score = OAMAE_1tok(cloud_src_kpts, cloud_des_kpts, est_trans2[i], one2k_match, inlier_thresh);
+        }
+        else{
+            cluster_eva_score = OAMAE(cloud_src_kpts, cloud_des_kpts, est_trans2[i], des_src2, inlier_thresh);
+        }
 #pragma omp critical
         {
             if (best_score < cluster_eva_score) {
@@ -1220,7 +1225,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     else{
         cout << "best_est1: " << similar2est1_cluster << ", best_est2: " << best_index << endl;
     }
-    //1、sampled corr -> overlap prior batch -> TCD 确定best_est1和best_est2中最好的
+    //sampled corr -> overlap prior batch -> TCD 确定best_est1和best_est2中最好的
     Eigen::Matrix4f best_est;
     PointCloudPtr sampled_src(new pcl::PointCloud<pcl::PointXYZ>); // dense point cloud
     PointCloudPtr sampled_des(new pcl::PointCloud<pcl::PointXYZ>);
@@ -1233,9 +1238,6 @@ bool registration(const string &name, const string &src_pointcloud, const string
     PointCloudPtr cluster_eva_corr_src(new pcl::PointCloud<pcl::PointXYZ>);
     PointCloudPtr cluster_eva_corr_des(new pcl::PointCloud<pcl::PointXYZ>);
     cout << "best_est1: " << score1 << ", best_est2: " << score2 << endl;
-
-    ///TODO 测试点：trancatedChamferDistance是否误检
-    //score2 = score1 + 1;
 
     // cluster_internal_evaluation
     if(cluster_internal_eva){
@@ -1268,13 +1270,16 @@ bool registration(const string &name, const string &src_pointcloud, const string
                     num++;
                 }
             }
-            ///TODO 注意这里的内点率要比seed内点率高
+            //这里的内点率要比seed内点率高
             cout << cluster_eva_corr_ind.size() << " intersection correspondences have " << num << " inlies: "<< num / ((int)cluster_eva_corr_ind.size() / 1.0) * 100 << "%" << endl;
             vector<pair<int, vector<int>>> des_src3;
             make_des_src_pair(cluster_eva_corr, des_src3);
-            best_est = clusterInternalTransEva1(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, des_src3, inlier_thresh, GTmat, false, folderPath);
-            //1tok
-            //best_est = clusterInternalTransEva1(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, one2k_match, inlier_thresh, GTmat, folderPath);
+            if(_1tok){
+                best_est = clusterInternalTransEva1(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, one2k_match, inlier_thresh, GTmat, true, folderPath);
+            }
+            else{
+                best_est = clusterInternalTransEva1(clusterTrans, best_index, best_est, Rs, Ts, cloud_src_kpts, cloud_des_kpts, des_src3, inlier_thresh, GTmat, false, folderPath);
+            }
         }
         else{ //best_est1不在聚类中
             if(score2 > score1){ //best_est2好的情况
@@ -1320,7 +1325,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     elapsed_time = end - start;
     time_epoch += std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count();
     time_number[3] =  elapsed_time.count();
-    //cout << " post evaluation: " << elapsed_time.count() << endl;
+    cout << " post evaluation: " << elapsed_time.count() << endl;
 
     Eigen::Matrix4f tmp_best;
     if (name == "U3M")

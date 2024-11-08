@@ -100,13 +100,6 @@ typedef struct {
     vector<Vote>clique_ind_score;
     float score;
 }local;
-typedef struct
-{
-    int clique_index;
-    int clique_size;
-    float clique_weight;
-    int clique_num;
-}node_cliques;
 /**********************************************funcs***************************************/
 //dataload
 int XYZorPly_Read(string Filename, PointCloudPtr& cloud);
@@ -153,6 +146,7 @@ void GUO_ICP(PointCloudPtr& cloud_source, PointCloudPtr& cloud_target, float mr,
 void savetxt(vector<Corre_3DMatch>corr, const string& save_path);
 int clusterTransformationByRotation(vector<Eigen::Matrix3f> &Rs, vector<Eigen::Vector3f> &Ts, float angle_thresh,float dis_thresh,  pcl::IndicesClusters &clusters, pcl::PointCloud<pcl::PointXYZINormal>::Ptr &trans);
 float OAMAE(PointCloudPtr& raw_src, PointCloudPtr& raw_des, Eigen::Matrix4f &est, vector<pair<int, vector<int>>> &des_src, float thresh);
+float OAMAE_1tok(PointCloudPtr& raw_src, PointCloudPtr& raw_des, Eigen::Matrix4f &est, vector<pair<int, vector<int>>> &src_des, float thresh);
 float trancatedChamferDistance(PointCloudPtr& src, PointCloudPtr& des, Eigen::Matrix4f &est, float thresh);
 void make_des_src_pair(const vector<Corre_3DMatch>& correspondence, vector<pair<int, vector<int>>>& des_src);
 void find_clique_of_node2(Eigen::MatrixXf& Graph, igraph_vector_int_list_t* cliques, vector<Corre_3DMatch>& correspondence,vector<int>& sampled_ind, vector<int>&remain);

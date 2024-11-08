@@ -184,16 +184,14 @@ void usage(){
     cout << "\tREQUIRED ARGS:" << endl;
     cout << "\t\t--output_path\toutput path for saving results." << endl;
     cout << "\t\t--input_path\tinput data path." << endl;
-    cout << "\t\t--dataset_name\tdataset name. [3dmatch/3dlomatch/KITTI/ETH/U3M]" << endl;
-    cout << "\t\t--descriptor\tdescriptor name. [fpfh/fcgf/spinnet/predator]" << endl;
+    cout << "\t\t--dataset_name\tdataset name. [3dmatch/3dlomatch/KITTI]" << endl;
+    cout << "\t\t--descriptor\tdescriptor name. [fpfh/fcgf/predator]" << endl;
     cout << "\t\t--start_index\tstart from given index. (begin from 0)" << endl;
     cout << "\tOPTIONAL ARGS:" << endl;
     cout << "\t\t--no_logs\tforbid generation of log files." << endl;
 };
 
 int main(int argc, char** argv) {
-//    demo();
-//    exit(0);
     //////////////////////////////////////////////////////////////////
     add_overlap = false;
     low_inlieratio = false;
