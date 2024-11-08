@@ -46,4 +46,4 @@ If you find this code useful for your work or use it in your project, please con
 ```
 
 ## Reference
-
+* [Zhang et al., 3D Registration with Maximal Cliques (CVPR 2023)](https://github.com/zhangxy0517/3D-Registration-with-Maximal-Cliques)
