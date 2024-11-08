@@ -44,14 +44,14 @@ def visualize(path):
         opt = vis.get_render_option()
         opt.background_color = np.asarray([0, 0, 0])
         return False
-    raw_src_pcd = o3d.io.read_point_cloud('../src.ply')
-    raw_tgt_pcd = o3d.io.read_point_cloud('../tgt.ply')
-    src_kpts = o3d.io.read_point_cloud('../src.pcd')
-    tgt_kpts = o3d.io.read_point_cloud('../tgt.pcd')
+    raw_src_pcd = o3d.io.read_point_cloud('src.ply')
+    raw_tgt_pcd = o3d.io.read_point_cloud('tgt.ply')
+    src_kpts = o3d.io.read_point_cloud('src.pcd')
+    tgt_kpts = o3d.io.read_point_cloud('tgt.pcd')
     corr = np.loadtxt(os.path.join(path, 'sampled_corr.txt'), dtype=int)
     label = np.loadtxt(os.path.join(path, 'sampled_corr_label.txt'), dtype=int)
     est_trans = np.loadtxt(os.path.join(path, 'est.txt'), dtype=np.float32)
-    #gt_trans = np.loadtxt(os.path.join(path, 'GTmat.txt'), dtype=np.float32)
+    #gt_trans = np.loadtxt('GTmat.txt', dtype=np.float32)
     true_corr = corr[np.where(label > 0)]
     src_kpts.translate((0, 1.25, 0), relative=True)
     tgt_kpts.translate((0, -1.25, 0), relative=True)
@@ -97,4 +97,4 @@ def visualize(path):
 
 
 if __name__ == '__main__':
-    visualize('demo/result')
+    visualize('result')
