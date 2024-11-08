@@ -1,5 +1,5 @@
 # MAC++: Going Further with Maximal Cliques for 3D Registration
-Source code of [3DV 2025 paper]().
+Source code of [MAC++: Going Further with Maximal Cliques for 3D Registration]().
 <div align="center">
     <img src="figures/pipeline.png" width="1000px">
 </div>
