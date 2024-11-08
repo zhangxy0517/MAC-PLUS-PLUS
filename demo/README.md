@@ -1,11 +1,13 @@
 # Usage:
-1. Make sure that this folder and the executable files are in the same folder
+1. Ensure this folder and the executable files (`Boot`, `MAC`) are in the same folder.
 2. Run the following command.
 ```
 ./Boot --demo
 ```
 The output will be like:
+```
 
+```
 3. Run the Python script `vis.py`. You will see the visualizations.
 ![image](https://github.com/user-attachments/assets/e69bffb6-86e6-4683-8816-719b833e51ca)
 ![image](https://github.com/user-attachments/assets/ac19990e-af88-4499-aea5-a7f112abfbb8)
