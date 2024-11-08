@@ -177,6 +177,20 @@ void demo(){
     system(cmd.c_str());
 }
 
+void usage(){
+    cout << "Usage:" << endl;
+    cout << "\tHELP --help" <<endl;
+    cout << "\tDEMO --demo" << endl;
+    cout << "\tREQUIRED ARGS:" << endl;
+    cout << "\t\t--output_path\toutput path for saving results." << endl;
+    cout << "\t\t--input_path\tinput data path." << endl;
+    cout << "\t\t--dataset_name\tdataset name. [3dmatch/3dlomatch/KITTI/ETH/U3M]" << endl;
+    cout << "\t\t--descriptor\tdescriptor name. [fpfh/fcgf/spinnet/predator]" << endl;
+    cout << "\t\t--start_index\tstart from given index. (begin from 0)" << endl;
+    cout << "\tOPTIONAL ARGS:" << endl;
+    cout << "\t\t--no_logs\tforbid generation of log files." << endl;
+};
+
 int main(int argc, char** argv) {
 //    demo();
 //    exit(0);
@@ -185,11 +199,73 @@ int main(int argc, char** argv) {
     low_inlieratio = false;
     no_logs = false;
     int id = 0;
-    string resultPath(argv[1]); //程序生成文件的保存目录
-    string datasetPath(argv[2]); //数据集路径
-    string datasetName(argv[3]); //数据集名称
-    string descriptor(argv[4]); //描述子
-    sscanf(argv[5], "%d", &id);
+    string resultPath; //程序生成文件的保存目录
+    string datasetPath; //数据集路径
+    string datasetName; //数据集名称
+    string descriptor; //描述子
+    //////////////////////////////////////////////////////////////////
+    int opt;
+    int digit_opind = 0;
+    int option_index = 0;
+    static struct option long_options[] = {
+            {"output_path", required_argument, NULL, 'o'},
+            {"input_path", required_argument, NULL, 'i'},
+            {"dataset_name", required_argument, NULL, 'n'},
+            {"descriptor", required_argument, NULL, 'd'},
+            {"start_index", required_argument, NULL, 's'},
+            {"no_logs", optional_argument, NULL, 'g'},
+            {"help", optional_argument, NULL, 'h'},
+            {"demo", optional_argument, NULL, 'm'},
+            {NULL, 0, 0, '\0'}
+    };
+
+    while((opt = getopt_long(argc, argv, "", long_options, &option_index)) != -1){
+        switch (opt) {
+            case 'h':
+                usage();
+                exit(0);
+            case 'o':
+                resultPath = optarg;
+                break;
+            case 'i':
+                datasetPath = optarg;
+                break;
+            case 'n':
+                datasetName = optarg;
+                break;
+            case 'd':
+                descriptor = optarg;
+                break;
+            case 'g':
+                no_logs = true;
+                break;
+            case 's':
+                id = atoi(optarg);
+                break;
+            case 'm':
+                demo();
+                exit(0);
+            case '?':
+                printf("Unknown option: %c\n",(char)optopt);
+                usage();
+                exit(-1);
+        }
+    }
+    if(argc  < 11){
+        cout << 11 - argc <<" more args are required." << endl;
+        usage();
+        exit(-1);
+    }
+
+    cout << "Check your args setting:" << endl;
+    cout << "\toutput_path: " << resultPath << endl;
+    cout << "\tinput_path: " << datasetPath << endl;
+    cout << "\tdataset_name: " << datasetName << endl;
+    cout << "\tdescriptor: " << descriptor << endl;
+    cout << "\tstart_index: " << id << endl;
+    cout << "\tno_logs: " << no_logs << endl;
+
+    sleep(5);
     //////////////////////////////////////////////////////////////////
     vector<double>scene_re_sum;
     vector<double>scene_te_sum;
