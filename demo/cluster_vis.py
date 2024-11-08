@@ -1,6 +1,4 @@
-
-
- chart_studio
+import chart_studio
 import pandas as pd
 import math
 from colormap import rgb2hex
