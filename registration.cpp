@@ -121,7 +121,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     bool use_icp = false;
     bool instance_equal = true;
     bool cluster_internal_eva = true;
-    bool _1tok = true; // in development
+    bool _1tok = false; // still in development
     int max_est_num = INT_MAX;
     low_inlieratio = false;
     add_overlap = false;
@@ -475,6 +475,7 @@ bool registration(const string &name, const string &src_pointcloud, const string
     inlier_ratio = inlier_num / (total_num / 1.0);
 
     if(_1tok){
+        cout << "experimental feature is enabled!" << endl;
         string _1tok = dataPath + '/' + item_name + "@1tok.txt";
         fp = fopen(_1tok.c_str(), "r");
         if (fp == NULL)
