@@ -1,5 +1,5 @@
 # MAC++: Going Further with Maximal Cliques for 3D Registration
-Source code of [MAC++: Going Further with Maximal Cliques for 3D Registration]().
+Source code of [MAC++: Going Further with Maximal Cliques for 3D Registration](https://openreview.net/forum?id=dOpxroaprM).
 <div align="center">
     <img src="figures/pipeline.png" width="1000px">
 </div>
@@ -47,7 +47,11 @@ All tested datasets can be found at this [link](https://pan.baidu.com/s/1ZCCWQyk
 ## Citation
 If you find this code useful for your work or use it in your project, please consider citing:
 ```
-
+@inproceedings{zhang2025mac++,
+  title={MAC++: Going Further with Maximal Cliques for 3D Registration},
+  author={Zhang, Xiyu and Zhang, Yanning and Yang, Jiaqi},
+  booktitle={International Conference on 3D Vision 2025}
+}
 ```
 
 ## Reference
