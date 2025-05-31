@@ -65,7 +65,7 @@ vector<string> analyse(const string& name, const string& result_scene, const str
     //error_txt = result_scene + "/error_pair.txt";
 
     //所有数据上测试
-    if (descriptor == "fpfh" || descriptor == "spinnet" || descriptor == "d3feat")
+    if (descriptor == "fpfh" || descriptor == "spinnet" || descriptor == "d3feat" || descriptor == "predator")
     {
         error_txt = dataset_scene + "/dataload.txt";
     }
@@ -280,105 +280,105 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (descriptor == "predator" && (datasetName == "3dmatch" || datasetName == "3dlomatch")) {
-        string analyse_csv = resultPath + "/" + datasetName + "_predator.csv";
-        ofstream outFile;
-        outFile.open(analyse_csv.c_str(), ios::out);
-        outFile.setf(ios::fixed, ios::floatfield);
-        outFile << "pair_name" << ',' << "corrected_or_no" << ',' << "inlier_num" << ',' << "total_num" << ','
-                << "inlier_ratio" << ',' << "RE" << ',' << "TE" << endl;
-        vector<string>pairs;
-        string loader = datasetPath + "/dataload.txt";
-        cout << loader << endl;
-        ifstream f1(loader);
-        string line;
-        while (getline(f1, line))
-        {
-            pairs.push_back(line);
-        }
-        f1.close();
-        vector<double>time;
-        for (int i = id; i < pairs.size(); i++)
-        {
-            cout << "Pair " << i + 1 << "，total" << pairs.size()/*name_list.size()*/ << endl;
-            string filename = pairs[i];
-            string corr_path = datasetPath + "/" + filename + "/corr_data.txt";
-            string gt_mat_path = datasetPath + "/" + filename + "/GTmat.txt";
-            string gt_label_path = datasetPath + "/" + filename + "/label.txt";
-            string src_filename = "NULL";
-            string des_filename = "NULL";
-            string ov_label = "NULL";
-            if(add_overlap){
-                ov_label = datasetPath + "/" + filename + "@gt_ov.txt";
-            }
-            folderPath = resultPath + "/" + filename;
-            string cmd = program_name + " " + datasetName + " " + src_filename + " " + des_filename + " " + corr_path + " " + gt_label_path + " " + gt_mat_path + " " + ov_label + " " + folderPath +  " " + descriptor;
-            system(cmd.c_str());
+    // if (descriptor == "predator" && (datasetName == "3dmatch" || datasetName == "3dlomatch")) {
+    //     string analyse_csv = resultPath + "/" + datasetName + "_predator.csv";
+    //     ofstream outFile;
+    //     outFile.open(analyse_csv.c_str(), ios::out);
+    //     outFile.setf(ios::fixed, ios::floatfield);
+    //     outFile << "pair_name" << ',' << "corrected_or_no" << ',' << "inlier_num" << ',' << "total_num" << ','
+    //             << "inlier_ratio" << ',' << "RE" << ',' << "TE" << endl;
+    //     vector<string>pairs;
+    //     string loader = datasetPath + "/dataload.txt";
+    //     cout << loader << endl;
+    //     ifstream f1(loader);
+    //     string line;
+    //     while (getline(f1, line))
+    //     {
+    //         pairs.push_back(line);
+    //     }
+    //     f1.close();
+    //     vector<double>time;
+    //     for (int i = id; i < pairs.size(); i++)
+    //     {
+    //         cout << "Pair " << i + 1 << "，total" << pairs.size()/*name_list.size()*/ << endl;
+    //         string filename = pairs[i];
+    //         string corr_path = datasetPath + "/" + filename + "/corr_data.txt";
+    //         string gt_mat_path = datasetPath + "/" + filename + "/GTmat.txt";
+    //         string gt_label_path = datasetPath + "/" + filename + "/label.txt";
+    //         string src_filename = "NULL";
+    //         string des_filename = "NULL";
+    //         string ov_label = "NULL";
+    //         if(add_overlap){
+    //             ov_label = datasetPath + "/" + filename + "@gt_ov.txt";
+    //         }
+    //         folderPath = resultPath + "/" + filename;
+    //         string cmd = program_name + " " + datasetName + " " + src_filename + " " + des_filename + " " + corr_path + " " + gt_label_path + " " + gt_mat_path + " " + ov_label + " " + folderPath +  " " + descriptor;
+    //         system(cmd.c_str());
 
-            int inlier_num =0 , total_num  =0;
-            double re=0, te=0;
-            string check_file = folderPath + "/eva.txt";
-            int corrected = 0;
-            if (access(check_file.c_str(), 0))
-            {
-                cout << check_file << " Fail." << endl;
-                corrected = 0;
-            }
-            else
-            {
-                FILE *f = fopen(check_file.c_str(), "r");
-                fscanf(f, "%lf %lf", &re, &te);
-                fclose(f);
-                //if(re <= re_thresh && te <= te_thresh){
-                cout << filename << " Success." << endl;
-                corrected = 1;
-                RE += re;
-                TE += te;
+    //         int inlier_num =0 , total_num  =0;
+    //         double re=0, te=0;
+    //         string check_file = folderPath + "/eva.txt";
+    //         int corrected = 0;
+    //         if (access(check_file.c_str(), 0))
+    //         {
+    //             cout << check_file << " Fail." << endl;
+    //             corrected = 0;
+    //         }
+    //         else
+    //         {
+    //             FILE *f = fopen(check_file.c_str(), "r");
+    //             fscanf(f, "%lf %lf", &re, &te);
+    //             fclose(f);
+    //             //if(re <= re_thresh && te <= te_thresh){
+    //             cout << filename << " Success." << endl;
+    //             corrected = 1;
+    //             RE += re;
+    //             TE += te;
 
-            }
+    //         }
 
-            //info
-            string status = folderPath + "/status.txt";
-            double mem_epoch, time_epoch;
-            vector<double> time_number(4, 0);
-            int correct_est_num;
-            FILE *f = fopen(status.c_str(), "r");
-            fscanf(f, "%lf %lf %d %d %d %lf %lf %lf %lf", &time_epoch, &mem_epoch, &correct_est_num, &inlier_num, &total_num, &time_number[0], &time_number[1], &time_number[2], &time_number[3]);
-            fclose(f);
+    //         //info
+    //         string status = folderPath + "/status.txt";
+    //         double mem_epoch, time_epoch;
+    //         vector<double> time_number(4, 0);
+    //         int correct_est_num;
+    //         FILE *f = fopen(status.c_str(), "r");
+    //         fscanf(f, "%lf %lf %d %d %d %lf %lf %lf %lf", &time_epoch, &mem_epoch, &correct_est_num, &inlier_num, &total_num, &time_number[0], &time_number[1], &time_number[2], &time_number[3]);
+    //         fclose(f);
 
-            cout << endl;
-            outFile << filename << ',' << corrected << ',' << inlier_num << ',' << total_num << ',';
-            outFile << setprecision(4) << inlier_num / (total_num / 1.0) << ',' << re << ',' << te << ','  << time_epoch << ',' << mem_epoch << ',' << correct_est_num << ',';
-            outFile << setprecision(4) << time_number[0] << ',' << time_number[1] << ',' << time_number[2] << ',' << time_number[3] << endl;
-        }
+    //         cout << endl;
+    //         outFile << filename << ',' << corrected << ',' << inlier_num << ',' << total_num << ',';
+    //         outFile << setprecision(4) << inlier_num / (total_num / 1.0) << ',' << re << ',' << te << ','  << time_epoch << ',' << mem_epoch << ',' << correct_est_num << ',';
+    //         outFile << setprecision(4) << time_number[0] << ',' << time_number[1] << ',' << time_number[2] << ',' << time_number[3] << endl;
+    //     }
 
-        int iter_num = 1;
-        cout << "Avg Time:" << endl;
-        for(int i = 0; i < iter_num; i++){
-            double avg_time = 0.0;
-            int n2 = 0;
-            vector<double>time_history;
-            for(int j = 0; j < pairs.size(); j++){
-                string filename = pairs[i];
-                folderPath = resultPath + "/" + filename;
-                string time_info = folderPath + '/' + to_string(i) +  "@time.txt";
-                FILE *in = fopen(time_info.c_str(), "r");
-                if(in == NULL){
-                    continue;
-                }
-                n2++;
-                double time;
-                fscanf(in, "%lf\n", &time);
-                avg_time+=time;
-                fclose(in);
-            }
-            avg_time /= (n2 / 1.0);
-            cout << avg_time << endl;
-        }
+    //     int iter_num = 1;
+    //     cout << "Avg Time:" << endl;
+    //     for(int i = 0; i < iter_num; i++){
+    //         double avg_time = 0.0;
+    //         int n2 = 0;
+    //         vector<double>time_history;
+    //         for(int j = 0; j < pairs.size(); j++){
+    //             string filename = pairs[i];
+    //             folderPath = resultPath + "/" + filename;
+    //             string time_info = folderPath + '/' + to_string(i) +  "@time.txt";
+    //             FILE *in = fopen(time_info.c_str(), "r");
+    //             if(in == NULL){
+    //                 continue;
+    //             }
+    //             n2++;
+    //             double time;
+    //             fscanf(in, "%lf\n", &time);
+    //             avg_time+=time;
+    //             fclose(in);
+    //         }
+    //         avg_time /= (n2 / 1.0);
+    //         cout << avg_time << endl;
+    //     }
 
-        outFile.close();
-    }
-    else if (datasetName == "3dlomatch") {
+    //     outFile.close();
+    // }
+    if (datasetName == "3dlomatch") {
         for (size_t i = id; i < 8; i++) {
             string analyse_csv = resultPath + "/" + threeDlomatch[i] + "_" + descriptor + ".csv";
             ofstream outFile;
