@@ -1,3 +1,5 @@
+
+
 # MAC++: Going Further with Maximal Cliques for 3D Registration
 Source code of [MAC++: Going Further with Maximal Cliques for 3D Registration](https://openreview.net/forum?id=dOpxroaprM).
 <div align="center">
@@ -15,7 +17,7 @@ Experiments conducted on U3M, 3DMatch/3DLoMatch, and KITTI-LC datasets show the 
 </div>
 
 ## Build
-MAC depends on [PCL](https://github.com/PointCloudLibrary/pcl/tags) (version `1.12.1` is recommended) and [igraph](https://github.com/igraph/igraph/tags)(`=0.10.6`). Please install these libraries first.
+MAC depends on [PCL](https://github.com/PointCloudLibrary/pcl/tags) (version `1.12.1` is recommended) and [igraph](https://github.com/igraph/igraph/tags)(=0.10.6). Please install these libraries first.
 To build MAC, you need [CMake](https://cmake.org/download/) and, of course, a compiler that supports `>= C++11`.
 - Option 1 (purely on the command line): Use CMake to generate Makefiles and then `make`.
     - You can simply run
@@ -37,7 +39,7 @@ To build MAC, you need [CMake](https://cmake.org/download/) and, of course, a co
 * `--input_path` input data path.
 * `--dataset_name` dataset name.
 * `--descriptor` descriptor name.
-* `--start_index`(begin from 0) run from given index.
+* `--start_index` (begin from 0) run from a given index.
 ### Optional args:
 * `--no_logs` forbid generation of log files.
 
